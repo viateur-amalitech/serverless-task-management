@@ -13,3 +13,12 @@ output "user_pool_client_id" {
 output "aws_region" {
   value = var.aws_region
 }
+
+# Helpful for configuring frontend role checks (optional)
+output "admin_group_name" {
+  value = var.admin_group_name
+}
+
+output "member_group_name" {
+  value = var.member_group_name
+}

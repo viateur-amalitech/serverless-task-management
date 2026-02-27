@@ -32,3 +32,15 @@ variable "member_group_name" {
   type        = string
   description = "Name of the member user group in Cognito"
 }
+
+# List of allowed origins for the frontend to call the API (CORS)
+# Example:
+#   frontend_allowed_origins = [
+#     "http://localhost:5173",
+#     "https://yourapp.amplifyapp.com"
+#   ]
+variable "frontend_allowed_origins" {
+  type        = list(string)
+  description = "CORS allowed origins for API Gateway HTTP API"
+  default     = ["http://localhost:5173"]
+}

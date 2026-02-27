@@ -6,10 +6,8 @@ import { withMiddleware } from '../middleware/wrapper';
 import { ValidationError, ForbiddenError } from '../utils/errors';
 import { Logger } from '../utils/logger';
 import * as AWS from 'aws-sdk';
-import { EmailTemplates } from '../utils/constants';
-import { Config } from '../utils/config';
-import { Logger } from '../utils/logger';
-import { isUserActive, sendEmail } from './notification_handler';
+// Notifications for task status changes are handled asynchronously by
+// the DynamoDB Stream in notification_handler.ts
 
 const cognito = new AWS.CognitoIdentityServiceProvider();
 
@@ -66,17 +64,17 @@ export const handler = withMiddleware(async (event: APIGatewayProxyEventV2, _con
         let assignedTo = data.assignedTo || 'UNASSIGNED';
         if (assignedTo !== 'UNASSIGNED') {
             const assignees = Array.isArray(assignedTo) ? assignedTo : [assignedTo];
-            
+
             // Remove duplicates
             const uniqueAssignees = [...new Set(assignees)];
-            
+
             // Check for deactivated users
             for (const email of uniqueAssignees) {
                 if (!(await Auth.isUserActive(email))) {
                     throw new ValidationError(`Cannot assign task to inactive or deactivated user: ${email}`);
                 }
             }
-            
+
             assignedTo = uniqueAssignees.length === 1 ? uniqueAssignees[0] : uniqueAssignees;
         }
 
@@ -150,29 +148,7 @@ export const handler = withMiddleware(async (event: APIGatewayProxyEventV2, _con
         updates.updatedAt = new Date().toISOString();
         await TaskRepository.update(taskId, updates, claims.email);
 
-        // Send notification if status changed
-        if (statusChanged) {
-            try {
-                const newTask = { ...oldTask, ...updates };
-                const subject = EmailTemplates.STATUS_UPDATE.SUBJECT(newTask.title);
-                const message = EmailTemplates.STATUS_UPDATE.BODY(newTask.title, oldTask.status, newTask.status);
-                // Notify all assigned members
-                if (newTask.assignedTo && newTask.assignedTo !== 'UNASSIGNED') {
-                    const assignees = Array.isArray(newTask.assignedTo) ? newTask.assignedTo : [newTask.assignedTo];
-                    for (const email of assignees) {
-                        if (await isUserActive(email)) {
-                            await sendEmail(email, subject, message);
-                        }
-                    }
-                }
-                // Notify admin
-                if (await isUserActive(Config.NOTIFICATIONS.ADMIN_EMAIL)) {
-                    await sendEmail(Config.NOTIFICATIONS.ADMIN_EMAIL, subject, message);
-                }
-            } catch (err) {
-                Logger.error('Failed to send status change notification', err, { taskId });
-            }
-        }
+        // Notification on status change is handled asynchronously by DynamoDB Stream (notification_handler.ts)
 
         return { body: { message: 'Task updated successfully', taskId } };
     }

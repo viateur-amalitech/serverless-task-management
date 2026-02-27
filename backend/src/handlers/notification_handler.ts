@@ -38,7 +38,7 @@ const strategies: Record<string, EventHandler> = {
                     }
                 }
             }
-            
+
             // Notify admin
             if (await isUserActive(Config.NOTIFICATIONS.ADMIN_EMAIL)) {
                 await sendEmail(Config.NOTIFICATIONS.ADMIN_EMAIL, subject, message);
@@ -67,13 +67,13 @@ export const handler = async (event: DynamoDBStreamEvent): Promise<void> => {
 
 export async function isUserActive(email: string): Promise<boolean> {
     if (!Config.COGNITO.USER_POOL_ID) return true;
-    
+
     try {
         const result = await cognito.adminGetUser({
             UserPoolId: Config.COGNITO.USER_POOL_ID,
             Username: email
         }).promise();
-        
+
         return result.Enabled === true && result.UserStatus !== 'UNKNOWN';
     } catch (err) {
         Logger.error('Error checking user status', err, { email });

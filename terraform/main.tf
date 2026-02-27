@@ -44,7 +44,7 @@ module "pre_signup_lambda" {
   environment_variables = {
     ALLOWED_DOMAINS = join(",", var.allowed_email_domains)
     # Set TABLE_NAME to satisfy shared config validation in backend
-    TABLE_NAME      = module.dynamodb.table_name
+    TABLE_NAME = module.dynamodb.table_name
   }
 }
 
@@ -162,11 +162,12 @@ resource "aws_iam_role_policy" "task_handler_dynamo" {
 
 
 module "apigateway" {
-  source       = "./modules/apigateway"
-  project_name = var.project_name
-  user_pool_id = module.cognito.user_pool_id
-  client_id    = module.cognito.client_id
-  region       = var.aws_region
+  source          = "./modules/apigateway"
+  project_name    = var.project_name
+  user_pool_id    = module.cognito.user_pool_id
+  client_id       = module.cognito.client_id
+  region          = var.aws_region
+  allowed_origins = var.frontend_allowed_origins
 }
 
 # --- HTTP API Integration ---
@@ -294,6 +295,7 @@ module "monitoring" {
   project_name = var.project_name
   lambda_function_names = [
     module.pre_signup_lambda.function_name,
+    module.post_confirmation_lambda.function_name,
     module.task_handler_lambda.function_name,
     module.notification_lambda.function_name
   ]

@@ -1,6 +1,40 @@
 # Serverless Task Management System
 
-A production-grade, secure, and scalable task management system built on AWS using React (TypeScript), Terraform, and Node.js (TypeScript).
+A production-grade, secure, and scalable task management system built on AWS using React (TypeScript), Terraform, and Node.js (TypeScript). It features role-based access control, least-privilege IAM, and production-ready monitoring.
+
+---
+
+## Table of Contents
+- [Features](#features)
+- [Architecture Overview](#architecture-overview)
+- [Prerequisites](#prerequisites)
+- [Local Development](#local-development)
+  - [Backend](#backend)
+  - [Frontend](#frontend)
+- [Build & Deploy Backend (Terraform)](#1-build--deploy-backend)
+- [Frontend Configuration](#2-frontend-configuration)
+- [Running the Frontend](#3-running-the-frontend)
+- [User Setup & Testing](#user-setup--testing)
+- [Security & RBAC](#security--rbac)
+- [DevOps & Monitoring](#devops--monitoring)
+- [Screenshots](#screenshots)
+- [API Overview](#api-overview)
+- [AWS Amplify Deployment](#aws-amplify-deployment)
+- [Troubleshooting](#troubleshooting)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+
+---
+
+## Features
+- Modern React + Vite frontend with TypeScript and Tailwind CSS
+- Serverless backend on AWS Lambda with API Gateway (Cognito Authorizer)
+- DynamoDB storage with efficient access patterns for tasks and users
+- Strict RBAC (Admin/Member) and domain-restricted sign-up flow
+- Infrastructure as Code with Terraform modules
+- Production monitoring with CloudWatch Alarms and SNS alerts
+
+---
 
 ##  Architecture Overview
 - **Frontend**: React + Vite + TypeScript (Hosted on AWS Amplify)
@@ -11,15 +45,12 @@ A production-grade, secure, and scalable task management system built on AWS usi
 
 ---
 
+## Local Development
 
-
-
-## Running Locally
-
-To run the project locally:
+To run the project locally end-to-end:
 
 ### Backend
-1. Build and start backend:
+1. Build backend functions:
     ```bash
     cd backend
     npm install
@@ -28,7 +59,7 @@ To run the project locally:
     ```
 
 ### Frontend
-1. Start frontend:
+1. Start the frontend dev server:
     ```bash
     cd frontend
     npm install
@@ -54,44 +85,12 @@ All key AWS resources and UI screens:
 | CloudFront       | ![CloudFront](screenshoots/cloudFront.png) |
 | SNS Topic        | ![SNS Topic](screenshoots/sns_topic.png) |
 | Alarms           | ![Alarms](screenshoots/alarms.png) |
-
+| SES Identities   | ![SES Identities](screenshoots/ses_identities.png) |
+| CloudWatch Logs  | ![CloudWatch Logs](screenshoots/cloudwatch_logs.png) |
 
 ---
 
 ---
-
-## AWS Amplify Deployment
-
-To deploy the frontend (React app) to AWS Amplify:
-
-1. Install Amplify CLI:
-    ```bash
-    npm install -g @aws-amplify/cli
-    amplify configure
-    ```
-2. Initialize Amplify in your frontend directory:
-    ```bash
-    cd frontend
-    amplify init
-    ```
-    - Choose Amplify Gen 1 if prompted
-    - Select AWS profile and defaults
-3. Add hosting:
-    ```bash
-    amplify add hosting
-    ```
-    - Choose Amazon CloudFront and S3
-    - Select DEV environment
-    - Choose Manual or Continuous
-4. Publish to Amplify:
-    ```bash
-    amplify publish
-    ```
-5. After publishing, Amplify will provide a public URL for your deployed site.
-
-For more details, see [Amplify Docs](https://docs.amplify.aws/cli/project/hosting/).
-
-Follow these instructions to set up the project locally and deploy to AWS.
 
 ### Prerequisites
 
@@ -267,6 +266,99 @@ The system includes comprehensive monitoring:
 
 ---
 
+## API Overview
+
+All endpoints are protected by Cognito JWT. Include the `Authorization: Bearer <idToken>` header in requests.
+
+- `GET /tasks`
+  - Admin: returns all tasks
+  - Member: returns tasks assigned to the authenticated user
+  - Optional query: `?q=<search>` to filter by title/description
+
+- `POST /tasks` (Admin only)
+  - Body:
+    ```json
+    {
+      "title": "String (required)",
+      "description": "String",
+      "priority": "LOW|MEDIUM|HIGH",
+      "assignedTo": "email | [emails] | 'UNASSIGNED'",
+      "dueDate": "ISO8601 string"
+    }
+    ```
+
+- `PUT /tasks/{id}`
+  - Admin: may update `status`, `priority`, `assignedTo`, `dueDate`, `description`, `title`
+  - Member: may update `status` of own tasks only
+
+- `DELETE /tasks/{id}` (Admin only)
+
+- `GET /users` (Admin only)
+
+Notes
+- Status transitions supported: `OPEN`, `IN_PROGRESS`, `CLOSED`.
+- On status changes, the system sends email notifications to assignees and the admin.
+
+---
+
+## AWS Amplify Deployment
+
+To deploy the frontend (React app) to AWS Amplify:
+
+1. Install Amplify CLI:
+    ```bash
+    npm install -g @aws-amplify/cli
+    amplify configure
+    ```
+2. Initialize Amplify in your frontend directory:
+    ```bash
+    cd frontend
+    amplify init
+    ```
+    - Choose Amplify Gen 1 if prompted
+    - Select AWS profile and defaults
+3. Add hosting:
+    ```bash
+    amplify add hosting
+    ```
+    - Choose Amazon CloudFront and S3
+    - Select DEV environment
+    - Choose Manual or Continuous
+4. Publish to Amplify:
+    ```bash
+    amplify publish
+    ```
+5. After publishing, Amplify will provide a public URL for your deployed site.
+
+For more details, see [Amplify Docs](https://docs.amplify.aws/cli/project/hosting/).
+
+Follow these instructions to set up the project locally and deploy to AWS.
+
+---
+
+## Troubleshooting
+
+- 401/403 errors when calling API
+  - Ensure you are sending a valid Cognito ID token in the `Authorization` header.
+  - Confirm your user is in the correct Cognito group (`Admin` vs `Member`).
+
+- Cannot sign up with personal email
+  - Sign-up is restricted to `@amalitech.com` and `@amalitechtraining.org` domains by design.
+
+- SES email sending fails in dev
+  - If your AWS SES account is in Sandbox, verify sender and recipient emails, or request production access.
+
+- Terraform apply fails (permissions)
+  - Verify your AWS CLI credentials and region: `aws sts get-caller-identity` and `aws configure list`.
+
+- CORS errors in the browser
+  - Make sure `VITE_API_URL` matches the deployed API Gateway URL and that you’re using HTTPS.
+
+- Stale frontend after Amplify deploy
+  - Invalidate CloudFront cache from the Amplify console or hard-refresh the browser (Ctrl/Cmd+Shift+R).
+
+---
+
 ##  Project Structure
 
 ```text
@@ -276,3 +368,14 @@ The system includes comprehensive monitoring:
 │   └── modules/        # Modular AWS resources (Cognito, DDB, etc.)
 └── scripts/            # Automation & Admin tools
 ```
+
+---
+
+## Contributing
+
+Contributions are welcome! Please:
+- Open an issue to discuss significant changes before starting work
+- Follow the existing code style and conventions
+- Keep commits scoped and messages clear
+
+---

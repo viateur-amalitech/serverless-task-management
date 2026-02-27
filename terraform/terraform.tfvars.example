@@ -1,0 +1,15 @@
+# Terraform Variables Configuration
+# Copy this file to terraform.tfvars and update with your values
+
+# AWS Configuration
+aws_region   = "eu-north-1"
+project_name = "serverless-task-mgmt"
+
+# Email Configuration
+allowed_email_domains = ["amalitech.com", "amalitechtraining.org"]
+sender_email          = "[EMAIL_ADDRESS]"
+admin_email           = "[EMAIL_ADDRESS]"
+
+# Cognito Groups
+admin_group_name  = "Admin"
+member_group_name = "Member"
